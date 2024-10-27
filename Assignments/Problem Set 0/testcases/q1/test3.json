@@ -1,0 +1,5 @@
+{
+    "description": "Palindrome with Even Number of Characters",
+    "input_args": ["'plassalp'"],
+    "comparison_args": ["True"]
+}
