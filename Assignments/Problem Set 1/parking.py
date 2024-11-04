@@ -26,14 +26,14 @@ class ParkingProblem(Problem[ParkingState, ParkingAction]):
     def is_goal(self, state: ParkingState) -> bool:
         # Loop through all the cars' positions
         for i, car in enumerate(state):
-            print(f"\033[91mChecking car {i} at position {car}\033[0m")  # Debug print in red
+            print(f"\033[91mChecking car {i} at position {car}\033[0m")  
             print(self.slots)
-            index_of_parked_car = self.slots.get(car, None)  # Get the slot position of the car
-            #print(f"\033[91mExpected slot position for car {i}: {slot_position}\033[0m")  # Debug print in red
-            if i != index_of_parked_car:  # Check if every car is in its slot
-                print(f"\033[91mCar {i} is not in its slot. Goal state: False\033[0m")  # Debug print in red
+            index_of_parked_car = self.slots.get(car, None)  # Get the index of the car parked at the current position
+            #print(f"\033[91mExpected slot position for car {i}: {slot_position}\033[0m")  
+            if i != index_of_parked_car:  # Check if the car is in its slot and not in the slot of another car
+                print(f"\033[91mCar {i} is not in its slot. Goal state: False\033[0m")  
                 return False
-        print(f"\033[91mAll cars are in their slots. Goal state: True\033[0m")  # Debug print in red
+        print(f"\033[91mAll cars are in their slots. Goal state: True\033[0m")  
         return True
         
     
