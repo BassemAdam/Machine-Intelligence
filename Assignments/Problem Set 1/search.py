@@ -156,8 +156,14 @@ def AStarSearch(problem: Problem[S, A], initial_state: S, heuristic: HeuristicFu
         # Store parent information for path reconstruction if state is not the initial state
         if parent_state is not None:
             parent[current_state] = (parent_state, action)
+            # Point(1, 1): (Point(1, 0), "DOWN"), The current position/state 
+            # parent_state: The previous position/state that led here
+            # action: The move that got us from parent to current state
+
+
         
         # Check if goal is reached
+        # notice that iam here only stop when we dequeue the goal state not stop when we enqueue it
         if problem.is_goal(current_state):
             # Reconstruct path from goal to initial state
             path = []
