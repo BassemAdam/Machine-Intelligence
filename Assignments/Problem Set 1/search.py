@@ -33,21 +33,24 @@ def BreadthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
         if problem.is_goal(current_state):
             # Reconstruct path
             path = []
-            while parent_state is not None:
+            # Traverse back from the goal state to the start state using the parent dictionary
+            while parent_state is not None: 
                 path.append(action)
-                current_state = parent_state
+                current_state = parent_state # Move to the parent state
+                # Get the parent state and the action that led to the current state from the parent dictionary
                 parent_state, action = parent.get(current_state, (None, None))
+            # Reverse the path to get the correct order from start to goal
             return list(reversed(path))
         
         # Expand current state
         for next_action in problem.get_actions(current_state):
-            next_state = problem.get_successor(current_state, next_action)
+            next_state = problem.get_successor(current_state, next_action) # Get the successor state for the current action
             
             # Add unexplored states to frontier
             if next_state not in explored:
-                frontier.append((next_state, current_state, next_action))
-                explored.add(next_state)
-                parent[current_state] = (parent_state, action)
+                frontier.append((next_state, current_state, next_action)) # Add the next state, current state, and action to the frontier
+                explored.add(next_state) # Mark the next state as explored
+                parent[current_state] = (parent_state, action) # Record the parent state and action that led to the next state so that we can use it later above in getting the path
     
     # No solution found
     return None
@@ -69,16 +72,18 @@ def DepthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
         if problem.is_goal(current_state):
             # Reconstruct path
             path = []
+            # same as in BFS didnt change
             while parent_state is not None:
                 path.append(action)
                 current_state = parent_state
                 parent_state, action = parent.get(current_state, (None, None))
             return list(reversed(path))
         
+        # here also same as in BFS 
         # Expand current state
         for next_action in problem.get_actions(current_state):
             next_state = problem.get_successor(current_state, next_action)
-            
+           
             # Add unexplored states to frontier
             if next_state not in explored:
                 frontier.append((next_state, current_state, next_action))
@@ -91,10 +96,10 @@ def DepthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
 def UniformCostSearch(problem: Problem[S, A], initial_state: S) -> Solution:
     #TODO: ADD YOUR CODE HERE
  
-      # Initialize frontier with (cost, sequence, state, parent, action)
+    # Initialize frontier with (cost, sequence, state, parent, action)
     frontier = PriorityQueue()
     sequence = 0
-    frontier.put((0, sequence, initial_state, None, None))
+    frontier.put((0, sequence, initial_state, None, None)) # this time we add the cost of the path to the state and also sequence to break tie if we have two states with the same cost
     
     # Track explored states and their cumulative costs
     explored = {initial_state: 0}  # state -> cumulative_cost
@@ -102,13 +107,13 @@ def UniformCostSearch(problem: Problem[S, A], initial_state: S) -> Solution:
     
     while not frontier.empty():
         # Get state with lowest cumulative cost
-        cost, _, current_state, parent_state, action = frontier.get()
+        cost, _, current_state, parent_state, action = frontier.get() # note in priority queue of python it prioritize the first element in the tuple and then second in case of tie
         
         # Skip if we've found a better path to this state
         if current_state in explored and explored[current_state] < cost:
             continue
             
-        # Check if goal reached
+        # Check if goal reached Literally the same as BFS and DFS
         if problem.is_goal(current_state):
             path = []
             while parent_state is not None:
@@ -117,15 +122,15 @@ def UniformCostSearch(problem: Problem[S, A], initial_state: S) -> Solution:
                 parent_state, action = parent.get(current_state, (None, None))
             return list(reversed(path))
         
-        # Expand current state
+        # Expand current state and loop over all possible actions for that current state 
         for next_action in problem.get_actions(current_state):
             next_state = problem.get_successor(current_state, next_action)
-            next_cost = cost + problem.get_cost(current_state, next_action)
+            next_cost = cost + problem.get_cost(current_state, next_action) # get the cumulative cost of the path to the next state
             
             # Add if unexplored or found better cumulative path
             if next_state not in explored or next_cost < explored[next_state]:
                 sequence += 1
-                frontier.put((next_cost, sequence, next_state, current_state, next_action))
+                frontier.put((next_cost, sequence, next_state, current_state, next_action)) # next_state is the current state and current state is the parent of the next state
                 explored[next_state] = next_cost  # Track cumulative cost
                 parent[next_state] = (current_state, next_action)  # Fix parent tracking
     
