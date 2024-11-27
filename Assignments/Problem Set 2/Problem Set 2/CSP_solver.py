@@ -58,12 +58,12 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 
     # Check binary constraints
     for constraint in problem.constraints:
-        if isinstance(constraint, BinaryConstraint):
-            if assigned_variable not in constraint.variables:
+        if isinstance(constraint, BinaryConstraint): # x/y = 0 
+            if assigned_variable not in constraint.variables: # x
                 continue
             
             # Get the other variable
-            other_var = constraint.get_other(assigned_variable)
+            other_var = constraint.get_other(assigned_variable) # y
             
             # Skip if other variable already assigned
             if other_var not in domains:
@@ -72,7 +72,7 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
             # Create new domain keeping only consistent values
             new_domain = {value for value in domains[other_var] 
                          if constraint.is_satisfied({assigned_variable: assigned_value, 
-                                                   other_var: value})}
+                                                   other_var: value})} # x , y 
             domains[other_var] = new_domain
             
             if not domains[other_var]:
