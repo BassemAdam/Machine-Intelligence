@@ -68,11 +68,11 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
             # Skip if other variable already assigned
             if other_var not in domains:
                 continue
-            
+           
             # Create new domain keeping only consistent values
             new_domain = {value for value in domains[other_var] 
                          if constraint.is_satisfied({assigned_variable: assigned_value, 
-                                                   other_var: value})} # x , y 
+                                                   other_var: value})} # x , y = 0
             domains[other_var] = new_domain
             
             if not domains[other_var]:

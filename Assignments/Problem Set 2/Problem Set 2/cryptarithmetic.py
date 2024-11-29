@@ -178,8 +178,8 @@ class CryptArithmeticProblem(Problem):
 
     def _get_column_digits(self, pos: int) -> tuple:
         # Get the digits of the column at the given position
-        d1 = self.LHS0_padded[pos] if self.LHS0_padded[pos] != '0' else None
-        d2 = self.LHS1_padded[pos] if self.LHS1_padded[pos] != '0' else None
+        d1 = self.LHS0_padded[pos] 
+        d2 = self.LHS1_padded[pos] 
         d3 = self.RHS_padded[pos]
 
         # Debug print statements
@@ -200,94 +200,97 @@ class CryptArithmeticProblem(Problem):
         
         if d1 and d2: # if both digits are not None in case of D E Y 
             self._add_two_digit_column_constraints(d1, d2, d3, carry_in, carry_out, sum_var, col_idx)
-        elif d1: # if only one digit is not None maybe some words have 4 letters and some have 5 so we need to handle that
-            self._add_single_digit_column_constraints(d1, d3, carry_in, carry_out, sum_var, col_idx)
-        elif d2: # same as above
-            self._add_single_digit_column_constraints(d2, d3, carry_in, carry_out, sum_var, col_idx)
-      
+        # note if i d1 does not exist or d2 or maybe both it depends on the length of words in left and right side if any case of those i would need to handle it 
+        # in cases like that bellow HOWEVER above i have handled that case by padding and added '0' to the left of the word to make them equal in length
+        # elif d1: # if only one digit is not None maybe some words have 4 letters and some have 5 so we need to handle that
+        #     self._add_two_digit_column_constraints(d1, '0', d3, carry_in, carry_out, sum_var, col_idx)
+        # elif d2: # same as above
+        #     self._add_two_digit_column_constraints('0', d2, d3, carry_in, carry_out, sum_var, col_idx)
+        # else:
+        #     self._add_two_digit_column_constraints('0', '0', d3, carry_in, carry_out, sum_var, col_idx)
+                                                      
     def _add_two_digit_column_constraints(self, digit1, digit2, result_digit, carry_in, carry_out, sum_var, col_idx):
-        # Create temporary sum variable to break down the constraint
-        temp_sum = f'TEMP_SUM{col_idx}'
-        self.variables.append(temp_sum)
-        self.domains[temp_sum] = set(range(19))  # Max possible sum is 18 (9+9)
-        # for carry in here but we will add constraints taking it into consideration
         
-        # Create temporary sum with carry variable
-        temp_sum_with_carry = f'TEMP_SUM_WITH_CARRY{col_idx}'
-        self.variables.append(temp_sum_with_carry)
-        self.domains[temp_sum_with_carry] = set(range(28))  # Max possible sum with carry is 27 (9+9+9)
-    
-        self.constraints.extend([
-            # digit1 + digit2 = temp_sum
-            BinaryConstraint(
-                (digit1, digit2),
-                lambda x, y: x + y in self.domains[temp_sum]
-            ),
-            
-            # temp_sum + carry_in = temp_sum_with_carry
-            BinaryConstraint(
-                (temp_sum, carry_in),
-                lambda temp, carry: temp + carry in self.domains[temp_sum_with_carry]
-            ),
-            
-            # temp_sum_with_carry = sum_var + 10*carry_out
-            BinaryConstraint(
-                (temp_sum_with_carry, carry_out),
-                lambda temp_with_carry, carry_out: any(
-                    temp_with_carry == sum_val + 10 * carry_out 
-                    for sum_val in self.domains[sum_var]
-                )
-            ),
-            
-            # sum_var should equal result_digit
-            BinaryConstraint(
-                (sum_var, result_digit),
-                lambda sum_val, result_val: sum_val == result_val
-            ),
-            
-            # Set carry_out based on temp_sum_with_carry
-            BinaryConstraint(
-                (temp_sum_with_carry, carry_out),
-                lambda temp_with_carry, carry_out: carry_out == (temp_with_carry // 10)
-            )
-        ])   
-    
-    def _add_single_digit_column_constraints(self, d, d3, carry_in, carry_out, sum_var, col_idx):
-        # Create temporary sum variable
-        temp_sum = f'TEMP{col_idx}'
-        self.variables.append(temp_sum)
-        self.domains[temp_sum] = set(range(10))
+        # Define Lsum  represents digit1 + digit2  + carry_in
+        Lsum = f'L_SUM{col_idx}'
+        self.variables.append(Lsum)
+        self.domains[Lsum] = set(range(0,200))  # Max possible sum is 991 because i will concatinate values of d1 and d2 
         
-        self.constraints.extend([
-            # d = temp_sum
-            BinaryConstraint(
-                (d, temp_sum),
-                lambda x, t: x == t
-            ),
-            
-            # temp_sum + carry_in = sum_var + 10*carry_out
-            BinaryConstraint(
-                (temp_sum, carry_in),
-                lambda t, c: any(
-                    t + c == s + 10 * co
-                    for s in self.domains[sum_var]
-                    for co in self.domains[carry_out]
-                )
-            ),
-            
-            # sum_var should equal d3
-            BinaryConstraint(
-                (sum_var, d3),
-                lambda s, r: s == r
-            ),
-            
-            # Set carry_out based on temp_sum
-            BinaryConstraint(
-                (temp_sum, carry_out),
-                lambda t, c: c == (1 if t >= 10 else 0)
-            )
-        ])
+        # Define Rsum  represents sum_var + 10*carry_out
+        Rsum = f'R_SUM{col_idx}'
+        self.variables.append(Rsum)
+        self.domains[Rsum] = set(range(0,20)) 
 
+     
+
+
+        def split_number(num): # left to right 0 to last length
+            digits = [int(d) for d in str(num)]
+            return digits
+        def safe_get(lst, index, default=0):
+            try:
+                return lst[index]
+            except IndexError:
+                return default
+
+        self.constraints.extend([
+            # Constraint 1: Lsum = Rsum and i dont need to convert them to integers here
+            BinaryConstraint( # 199 => 1 + 9 + 9 =  RHG = 9 + 10*1 
+                (Lsum, Rsum),
+                lambda Lsum, Rsum: sum(split_number(Lsum)) == sum(split_number(Rsum))
+            ),
+             # Constraint 2: Make sure that Lsum first digit is equal to digit1 since its string 
+             # so i will split and convert to integer and then check if its equal to digit1
+             # i will use the function int to convert the string to integer
+             # Constraint 2: Lsum's first digit equals digit1
+            BinaryConstraint(
+                (Lsum, digit1),
+                lambda Lsum, digit1: safe_get(split_number(Lsum),2) == int(digit1)
+            ),
+            # Constraint 3: Lsum's second digit equals digit2
+            BinaryConstraint(
+                (Lsum, digit2),
+                lambda Lsum, digit2: safe_get(split_number(Lsum),1) == int(digit2)
+            ),
+              BinaryConstraint(
+                (Lsum, carry_in),
+                lambda Lsum, carry_in: carry_in == safe_get(split_number(Lsum),0)
+            ),
+            # Constraint 4: Rsum's first digit equals carry_out
+            BinaryConstraint(
+                (Rsum, carry_out),
+                lambda Rsum, carry_out: split_number(Rsum)[0] == int(carry_out)
+            ),
+            # Constraint 5: Rsum's second digit equals result_digit
+            BinaryConstraint(
+                (Rsum, result_digit),
+                lambda Rsum, result_digit: safe_get(split_number(Rsum),1) == int(result_digit)
+            ),
+             
+            # Constraint 5: Rsum's second digit equals result_digit
+            BinaryConstraint(
+                (Rsum, sum_var),
+                lambda Rsum, sum_var: safe_get(split_number(Rsum),1) == int(sum_var)
+            ),
+            # Add special constraint for the last column
+            BinaryConstraint(
+                    (Rsum, carry_out),
+                    lambda Rsum, cout: (
+                        print('\n' + '='*50),
+                        print('\033[95m[DEBUG] Constraint Evaluation\033[0m'),
+                        print('\033[94m{:<20} {}\033[0m'.format('Rsum value:', Rsum)),
+                        print('\033[94m{:<20} {}\033[0m'.format('value of R in col before last:', cout)),
+                        print('\033[92m{:<20} {}\033[0m'.format('Rsum last digit:', safe_get(split_number(Rsum),1))),
+                        print('\033[92m{:<20} {}\033[0m'.format('cout that comes from col before last:', cout)),
+                        print('\033[93m{:<20} {}\033[0m'.format('Constraint check:', 
+                            f'{safe_get(split_number(Rsum),1)} == {safe_get(split_number(cout),0)}')),
+                        print('='*50 + '\n'),
+                        safe_get(split_number(Rsum),1) == cout 
+                    )
+                ),
+        ])
+              
+ 
     # Read a cryptarithmetic puzzle from a file
     @staticmethod
     def from_file(path: str) -> "CryptArithmeticProblem":
