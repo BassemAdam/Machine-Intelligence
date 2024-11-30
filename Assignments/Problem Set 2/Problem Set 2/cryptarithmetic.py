@@ -4,6 +4,26 @@ from CSP import Assignment, Problem, UnaryConstraint, BinaryConstraint
 
 #TODO (Optional): Import any builtin library or define any helper function you want to use
 
+def split_number(number: int) -> list:
+    return [int(digit) for digit in str(number)]
+
+def safeget(lst, index, default=0):
+    """
+    Safely get an element from a list at given index.
+    
+    Args:
+        lst (list): Input list
+        index (int): Index to retrieve
+        default (Any): Default value if index out of bounds (default: 0)
+    
+    Returns:
+        Any: Element at index if exists, else default value
+    """
+    try:
+        return lst[index]
+    except (IndexError, TypeError):
+        return default
+
 # This is a class to define for cryptarithmetic puzzles as CSPs
 class CryptArithmeticProblem(Problem):
     LHS: Tuple[str, str]
@@ -64,7 +84,13 @@ class CryptArithmeticProblem(Problem):
         problem._add_column_constraints()
         
         return problem
-
+        # Read a cryptarithmetic puzzle from a file
+    
+    @staticmethod
+    def from_file(path: str) -> "CryptArithmeticProblem":
+        with open(path, 'r') as f:
+            return CryptArithmeticProblem.from_text(f.read())
+        
     def _initialize_variables(self, LHS0: str, LHS1: str, RHS: str) -> None:
         # note self here is a CryptArithmeticProblem object its like this in cpp
         # the input given to this function will be for ex: LH0 = "SEND", LHS1 = "MORE", RHS = "MONEY" 
@@ -90,21 +116,44 @@ class CryptArithmeticProblem(Problem):
         #  M  O  N  E  Y
         #  s4 s3 s2 s1 s0
         self.carries = [f'C{i}' for i in range(self.max_len)]
-        self.sums = [f'SUM{i}' for i in range(self.max_len)]
+        self.variables = list(self.letters) + self.carries 
+         
+        self.Aux_variables = []  # Initialize empty list to store all aux vars
         
-        # Set all variables
-        self.variables = list(self.letters) + self.carries + self.sums
+        # In the loop
+        for col_idx in range(self.max_len):
+            # Define Lsum represents digit1 + digit2 + carry_in
+            Lsum = f'L_SUM{col_idx}'
+            # Define Rsum represents sum_var + 10*carry_out
+            Rsum = f'R_SUM{col_idx}'
+            
+            # Store pair for this column
+            self.Aux_variables.append((Lsum, Rsum))
+            
+            # Add to main variables list
+            self.variables.extend([Lsum, Rsum])
+          
 
-        # # Debug print statements
+        #       # Debug print statements
         # red = "\033[91m"
+        # pink = "\033[95m"
         # reset = "\033[0m"
+        
+        # print(f"\n{red}=== Basic Variables ==={reset}")
         # print(f"{red}Letters: {self.letters}{reset}")
         # print(f"{red}Max Length: {self.max_len}{reset}")
         # print(f"{red}LHS0 Padded: {self.LHS0_padded}{reset}")
         # print(f"{red}LHS1 Padded: {self.LHS1_padded}{reset}")
         # print(f"{red}RHS Padded: {self.RHS_padded}{reset}")
         # print(f"{red}Carries: {self.carries}{reset}")
-        # print(f"{red}Sums: {self.sums}{reset}")
+        
+        # print(f"\n{pink}=== Auxiliary Variables ==={reset}")
+        # for col_idx, (lsum, rsum) in enumerate(self.Aux_variables):
+        #     print(f"{pink}Column {col_idx}:{reset}")
+        #     print(f"{pink}  Lsum: {lsum}{reset}")
+        #     print(f"{pink}  Rsum: {rsum}{reset}")
+        
+        # print(f"\n{red}=== All Variables ==={reset}")
         # print(f"{red}All Variables: {self.variables}{reset}")
 
     def _initialize_domains(self) -> None:
@@ -126,16 +175,25 @@ class CryptArithmeticProblem(Problem):
             # Leading letters get domain [1-9], others [0-9]
             self.domains[letter] = set(range(1, 10)) if letter in leading_letters else set(range(10))
         
-        # Carry domains
-        for carry in self.carries:
-            self.domains[carry] = {0, 1}
+            
+        for i, carry in enumerate(self.carries):
+            if i == 0:  # First carry
+                self.domains[carry] = {0} 
+            else:  # All other carries
+                self.domains[carry] = {0, 1} 
         
-        # Sum domains
-        for sum_var in self.sums:
-            self.domains[sum_var] = set(range(10))
-        
-        # to see the set for every letter uncomment this part 
-        # # Debug print statements 
+   
+        for col_idx in range(self.max_len):
+            # Define Lsum  represents digit1 + digit2  + carry_in
+            Lsum = f'L_SUM{col_idx}'
+            # Define Rsum  represents sum_var + 10*carry_out
+            Rsum = f'R_SUM{col_idx}'
+            self.domains[Lsum] = set(range(0,200))  # Max possible sum is 991 because i will concatinate values of d1 and d2 
+            self.domains[Rsum] = set(range(0,20)) 
+         
+      
+         
+        # # Debug print statements
         # blue = "\033[94m"
         # reset = "\033[0m"
         # for var, domain in self.domains.items():
@@ -182,24 +240,31 @@ class CryptArithmeticProblem(Problem):
         d2 = self.LHS1_padded[pos] 
         d3 = self.RHS_padded[pos]
 
-        # Debug print statements
-        blue = "\033[94m"
-        reset = "\033[0m"
-        print(f"{blue}Column position: {pos}{reset}")
-        print(f"{blue}LHS0 digit: {d1}{reset}")
-        print(f"{blue}LHS1 digit: {d2}{reset}")
-        print(f"{blue}RHS digit: {d3}{reset}")
+        # # Debug print statements
+        # blue = "\033[94m"
+        # reset = "\033[0m"
+        # print(f"{blue}Column position: {pos}{reset}")
+        # print(f"{blue}LHS0 digit: {d1}{reset}")
+        # print(f"{blue}LHS1 digit: {d2}{reset}")
+        # print(f"{blue}RHS digit: {d3}{reset}")
 
         return d1, d2, d3
 
     def _add_single_column_constraints(self, col_idx: int, digits: tuple) -> None:
         d1, d2, d3 = digits # unpack the digits of the column
+
+        def safe_get(lst, index, default=0):
+            try:
+                return lst[index]
+            except IndexError:
+                return default
+        Lsum,Rsum = self.Aux_variables[col_idx]
         carry_in = self.carries[col_idx] # get the carry in variable of the column
-        carry_out = self.carries[col_idx] #etc... just getting the associated variables to that coloumn
-        sum_var = self.sums[col_idx]
+        carry_out =safe_get(self.carries,col_idx+1,'C0')  #etc... just getting the associated variables to that coloumn
+
         
         if d1 and d2: # if both digits are not None in case of D E Y 
-            self._add_two_digit_column_constraints(d1, d2, d3, carry_in, carry_out, sum_var, col_idx)
+            self._add_two_digit_column_constraints(d1, d2, d3,Lsum,Rsum, carry_in, carry_out, col_idx)
         # note if i d1 does not exist or d2 or maybe both it depends on the length of words in left and right side if any case of those i would need to handle it 
         # in cases like that bellow HOWEVER above i have handled that case by padding and added '0' to the left of the word to make them equal in length
         # elif d1: # if only one digit is not None maybe some words have 4 letters and some have 5 so we need to handle that
@@ -209,90 +274,84 @@ class CryptArithmeticProblem(Problem):
         # else:
         #     self._add_two_digit_column_constraints('0', '0', d3, carry_in, carry_out, sum_var, col_idx)
                                                       
-    def _add_two_digit_column_constraints(self, digit1, digit2, result_digit, carry_in, carry_out, sum_var, col_idx):
-        
-        # Define Lsum  represents digit1 + digit2  + carry_in
-        Lsum = f'L_SUM{col_idx}'
-        self.variables.append(Lsum)
-        self.domains[Lsum] = set(range(0,200))  # Max possible sum is 991 because i will concatinate values of d1 and d2 
-        
-        # Define Rsum  represents sum_var + 10*carry_out
-        Rsum = f'R_SUM{col_idx}'
-        self.variables.append(Rsum)
-        self.domains[Rsum] = set(range(0,20)) 
+    def _add_two_digit_column_constraints(self, digit1, digit2, result_digit, Lsum, Rsum, carry_in, carry_out, col_idx):
+        """
+        Adds constraints for a single column in a cryptarithmetic puzzle.
 
-     
+        Args:
+            digit1 (str): First digit in the column (from LHS0).
+            digit2 (str): Second digit in the column (from LHS1).
+            result_digit (str): Result digit in the column (from RHS).
+            Lsum (str): Auxiliary variable representing the left-side sum (digit1 + digit2 + carry_in).
+            Rsum (str): Auxiliary variable representing the right-side sum (result_digit + 10 * carry_out).
+            carry_in (str): Carry into the column.
+            carry_out (str): Carry out of the column.
+            col_idx (int): The column index (0-based, rightmost is 0).
+        """
+         # Handle padded zeros
+        if digit1 == '0':
+            self.variables.append(digit1)
+            self.domains[digit1] = {0}
+            
+        if digit2 == '0':
+            self.variables.append(digit2)
+            self.domains[digit2] = {0}
 
+        # Edge cases for carries
+        if col_idx == 0:  # Rightmost column: carry_in must be 0
+            self.constraints.append(
+                UnaryConstraint(carry_in, lambda cin: cin == 0)
+            )
+        if col_idx == self.max_len - 1:  # Leftmost column: carry_out must be 0
+            self.constraints.append(
+                UnaryConstraint(carry_out, lambda cout: cout == 0)
+            )
 
-        def split_number(num): # left to right 0 to last length
-            digits = [int(d) for d in str(num)]
-            return digits
-        def safe_get(lst, index, default=0):
-            try:
-                return lst[index]
-            except IndexError:
-                return default
-
-        self.constraints.extend([
-            # Constraint 1: Lsum = Rsum and i dont need to convert them to integers here
-            BinaryConstraint( # 199 => 1 + 9 + 9 =  RHG = 9 + 10*1 
-                (Lsum, Rsum),
-                lambda Lsum, Rsum: sum(split_number(Lsum)) == sum(split_number(Rsum))
-            ),
-             # Constraint 2: Make sure that Lsum first digit is equal to digit1 since its string 
-             # so i will split and convert to integer and then check if its equal to digit1
-             # i will use the function int to convert the string to integer
-             # Constraint 2: Lsum's first digit equals digit1
+        # Constraint: Lsum = digit1 + digit2 + carry_in
+        self.constraints.append(
             BinaryConstraint(
                 (Lsum, digit1),
-                lambda Lsum, digit1: safe_get(split_number(Lsum),2) == int(digit1)
-            ),
-            # Constraint 3: Lsum's second digit equals digit2
+                lambda lsum, d1: safeget(split_number(lsum),-1) == d1   # Ensure the last digit of Lsum matches digit1
+            )
+        )
+        self.constraints.append(
             BinaryConstraint(
                 (Lsum, digit2),
-                lambda Lsum, digit2: safe_get(split_number(Lsum),1) == int(digit2)
-            ),
-              BinaryConstraint(
-                (Lsum, carry_in),
-                lambda Lsum, carry_in: carry_in == safe_get(split_number(Lsum),0)
-            ),
-            # Constraint 4: Rsum's first digit equals carry_out
+                lambda lsum, d2: safeget(split_number(lsum),-2) == d2   # Ensure the second last digit of Lsum matches digit2
+            )
+        )
+        self.constraints.append(
             BinaryConstraint(
-                (Rsum, carry_out),
-                lambda Rsum, carry_out: split_number(Rsum)[0] == int(carry_out)
-            ),
-            # Constraint 5: Rsum's second digit equals result_digit
+                (Lsum, carry_in),
+                lambda lsum, cin: safeget(split_number(lsum),-3) == cin   # Ensure the third last digit of Lsum matches carry_in
+            )
+        )
+
+        # Constraint: Rsum = result_digit + 10 * carry_out
+        self.constraints.append(
             BinaryConstraint(
                 (Rsum, result_digit),
-                lambda Rsum, result_digit: safe_get(split_number(Rsum),1) == int(result_digit)
-            ),
-             
-            # Constraint 5: Rsum's second digit equals result_digit
+                lambda rsum, rd: split_number(rsum)[-1] == rd  # Ensure the last digit of Rsum matches result_digit
+            )
+        )
+        self.constraints.append(
             BinaryConstraint(
-                (Rsum, sum_var),
-                lambda Rsum, sum_var: safe_get(split_number(Rsum),1) == int(sum_var)
-            ),
-            # Add special constraint for the last column
+                (Rsum, carry_out),
+                lambda rsum, cout: (
+                    # For single digit Rsum, carry_out must be 0
+                    # For two digits, carry_out must be first digit
+                    (len(split_number(rsum)) == 1 and cout == 0) or
+                    (len(split_number(rsum)) == 2 and split_number(rsum)[0] == cout)
+                )
+            )
+        )
+        self.constraints.append(
             BinaryConstraint(
-                    (Rsum, carry_out),
-                    lambda Rsum, cout: (
-                        print('\n' + '='*50),
-                        print('\033[95m[DEBUG] Constraint Evaluation\033[0m'),
-                        print('\033[94m{:<20} {}\033[0m'.format('Rsum value:', Rsum)),
-                        print('\033[94m{:<20} {}\033[0m'.format('value of R in col before last:', cout)),
-                        print('\033[92m{:<20} {}\033[0m'.format('Rsum last digit:', safe_get(split_number(Rsum),1))),
-                        print('\033[92m{:<20} {}\033[0m'.format('cout that comes from col before last:', cout)),
-                        print('\033[93m{:<20} {}\033[0m'.format('Constraint check:', 
-                            f'{safe_get(split_number(Rsum),1)} == {safe_get(split_number(cout),0)}')),
-                        print('='*50 + '\n'),
-                        safe_get(split_number(Rsum),1) == cout 
+                    (Lsum, Rsum),
+                    lambda Lsum, Rsum: (
+                        sum(split_number(Lsum)) == 
+                            split_number(Rsum)[-1] + 10 * safeget(split_number(Rsum),-2,0)
+                
                     )
                 ),
-        ])
-              
- 
-    # Read a cryptarithmetic puzzle from a file
-    @staticmethod
-    def from_file(path: str) -> "CryptArithmeticProblem":
-        with open(path, 'r') as f:
-            return CryptArithmeticProblem.from_text(f.read())
+        )
