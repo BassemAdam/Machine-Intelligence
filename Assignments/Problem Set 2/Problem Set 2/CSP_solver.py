@@ -14,7 +14,7 @@ def one_consistency(problem: Problem) -> bool:
             remaining_constraints.append(constraint)
             continue
         variable = constraint.variable
-        print(f"\033[91m{variable}\033[0m")
+      
         new_domain = {value for value in problem.domains[variable] if constraint.condition(value)}
         if not new_domain:
             solvable = False
