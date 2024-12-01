@@ -127,7 +127,7 @@ class CryptArithmeticProblem(Problem):
             # Define Rsum represents sum_var + 10*carry_out
             Rsum = f'R_SUM{col_idx}'
             
-            # Store pair for this column
+            # Store pair for this column you can ignore it i was just using in debugging
             self.Aux_variables.append((Lsum, Rsum))
             
             # Add to main variables list
@@ -188,7 +188,7 @@ class CryptArithmeticProblem(Problem):
             Lsum = f'L_SUM{col_idx}'
             # Define Rsum  represents sum_var + 10*carry_out
             Rsum = f'R_SUM{col_idx}'
-            self.domains[Lsum] = set(range(0,200))  # Max possible sum is 991 because i will concatinate values of d1 and d2 
+            self.domains[Lsum] = set(range(0,200))  # Max possible sum is 199 because i will concatinate values of cin and d1 and d2 
             self.domains[Rsum] = set(range(0,20)) 
          
       
@@ -260,10 +260,10 @@ class CryptArithmeticProblem(Problem):
                 return default
         Lsum,Rsum = self.Aux_variables[col_idx]
         carry_in = self.carries[col_idx] # get the carry in variable of the column
-        carry_out =safe_get(self.carries,col_idx+1,'C0')  #etc... just getting the associated variables to that coloumn
+        carry_out =safe_get(self.carries,col_idx+1,'C0')  #etc... just getting the associated variables to that coloumn last carry out will be 0 so i will set it to C0
 
         
-        if d1 and d2: # if both digits are not None in case of D E Y 
+        if d1 and d2: 
             self._add_two_digit_column_constraints(d1, d2, d3,Lsum,Rsum, carry_in, carry_out, col_idx)
         # note if i d1 does not exist or d2 or maybe both it depends on the length of words in left and right side if any case of those i would need to handle it 
         # in cases like that bellow HOWEVER above i have handled that case by padding and added '0' to the left of the word to make them equal in length
@@ -288,7 +288,7 @@ class CryptArithmeticProblem(Problem):
             carry_out (str): Carry out of the column.
             col_idx (int): The column index (0-based, rightmost is 0).
         """
-         # Handle padded zeros
+        # Handle padded zeros
         if digit1 == '0':
             self.variables.append(digit1)
             self.domains[digit1] = {0}
@@ -308,6 +308,8 @@ class CryptArithmeticProblem(Problem):
             )
 
         # Constraint: Lsum = digit1 + digit2 + carry_in
+        # nice note maybe Lsum will be only two digits or maybe one digit or maybe three digits so i will handle that by
+        # using function safeget that i defined above to get the digit at the index if it exists if not return 0 and we are accessing them from right so we are matching digits correctly 
         self.constraints.append(
             BinaryConstraint(
                 (Lsum, digit1),
@@ -345,6 +347,7 @@ class CryptArithmeticProblem(Problem):
                 )
             )
         )
+        # Constraint: Lsum = Rsum
         self.constraints.append(
             BinaryConstraint(
                     (Lsum, Rsum),
