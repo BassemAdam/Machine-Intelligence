@@ -30,33 +30,46 @@ def greedy(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: 
 # get values[0].
 def minimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
     #TODO: Complete this function
+    
+    # I will define a helper function to recursively search the game tree
     def minimax_helper(state: S, depth: int) -> Tuple[float, Optional[A]]:
-        # Check terminal state
+        
+        # Check if current state is terminal state
         is_terminal, values = game.is_terminal(state)
         if is_terminal:
+            # if its terminal state then i will return its value and no action is needed
             return values[0], None
         
         # Check depth limit
+        # max depth is given so we need to limit search to that max depth
         if max_depth != -1 and depth >= max_depth:
+            # if depth is greater than max depth then i will return heuristic value of current state and no action is needed
             return heuristic(game, state, 0), None
         
         # Get available actions
         actions = game.get_actions(state)
         if not actions:
+            # as above
             return heuristic(game, state, 0), None
-            
+        
+        # Get the turn of the player    
         turn = game.get_turn(state)
+        # I will initialize the best action to the first action in the list for now until i assign it the best action
         best_action = actions[0]
         
         if turn == 0:  # Max node (player's turn)
             best_value = float('-inf')
             for action in actions:
+                # we will loop through all the actions and get the successor state and thier values to maxmize the value of the state
                 successor = game.get_successor(state, action)
+                # recursively call the helper function to get the value of the successor state
+                # to avoid complexity think of it as iam just getting the value of the successor state
                 value, _ = minimax_helper(successor, depth + 1)
+                # if the value of the successor state is greater than the best value then i will update the best value and best action
                 if value > best_value:
                     best_value = value
                     best_action = action
-        else:  # Min node (enemy's turn)
+        else:  # Min node (enemy's turn) here is like the above code but we are minimizing the value
             best_value = float('inf')
             for action in actions:
                 successor = game.get_successor(state, action)
@@ -74,8 +87,13 @@ def minimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth:
 # Hint: Read the hint for minimax.
 def alphabeta(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
     #TODO: Complete this function
+    
+    # I will define a helper function to recursively search the game tree as above
+    # its the same as minimax but with additional logic for alpha and beta pruning
+    # so I will skip writing comments for all code that like minimax
     def alpha_beta_helper(state: S, depth: int, alpha: float, beta: float) -> Tuple[float, Optional[A]]:
-        # Check terminal state
+        
+        # Check terminal state as minimax
         is_terminal, values = game.is_terminal(state)
         if is_terminal:
             return values[0], None
@@ -88,7 +106,8 @@ def alphabeta(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dept
         actions = game.get_actions(state)
         if not actions:
             return heuristic(game, state, 0), None
-            
+        
+        # Get the turn of the player and initialize the best action to the first action in the list temporarily    
         turn = game.get_turn(state)
         best_action = actions[0]
         
@@ -100,10 +119,15 @@ def alphabeta(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dept
                 if value > best_value:
                     best_value = value
                     best_action = action
+                # update alpha value
                 alpha = max(alpha, best_value)
+                # if alpha is greater than or equal to beta then we can prune the tree
+                # because we know that the value of the current state will not be used
+                # so we can break the loop
+                # this is the main logic of alpha beta pruning
                 if alpha >= beta:  # Pruning
                     break
-        else:  # Min node (enemy's turn)
+        else:  # Min node (enemy's turn) is like the above code but we are minimizing the value
             best_value = float('inf')
             for action in actions:
                 successor = game.get_successor(state, action)
@@ -147,13 +171,16 @@ def alphabeta_with_move_ordering(game: Game[S, A], state: S, heuristic: Heuristi
         def get_action_value(action: A) -> float:
             successor = game.get_successor(state, action)
             return heuristic(game, successor, 0)
-            
+        
+        # sorting imporves the performance of alpha beta pruning coz we are exploring the best moves first for min or max node
+        # why ?? moves with higher heuristic values are more likely to be better moves or lead to pruning at min nodes and vice versa    
         # Use stable sort with appropriate ordering based on turn
         if turn == 0:  # Max node
             actions = sorted(actions, key=get_action_value, reverse=True)
         else:  # Min node
             actions = sorted(actions, key=get_action_value)
-            
+        
+        # the rest is the sames as alpha beta pruning    
         best_action = actions[0]
         
         if turn == 0:  # Max node (player's turn)
@@ -191,6 +218,7 @@ def alphabeta_with_move_ordering(game: Game[S, A], state: S, heuristic: Heuristi
 # they now act as chance nodes (they act randomly).
 def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
     #TODO: Complete this function
+    # I will skip all the parts that is repeated and go directly to explain chance ndode logic
     def expectimax_helper(state: S, depth: int) -> Tuple[float, Optional[A]]:
         # Check terminal state
         is_terminal, values = game.is_terminal(state)
@@ -218,13 +246,14 @@ def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dep
                     best_value = value
                     best_action = action
         else:  # Chance node (enemy's turn)
+            # unlike adversial search where we minimize the value of the state here we are averaging the value of the states avaialable for that node
             # Calculate expected value across all actions
             total_value = 0
             num_actions = len(actions)
             for action in actions:
                 successor = game.get_successor(state, action)
                 value, _ = expectimax_helper(successor, depth + 1)
-                total_value += value
+                total_value += value # sum of all values of the states
             best_value = total_value / num_actions  # Average value for chance node
             
         return best_value, best_action
