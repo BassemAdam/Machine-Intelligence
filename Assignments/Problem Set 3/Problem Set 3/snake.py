@@ -78,7 +78,9 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
             self.rng.seed(seed) # Initialize the random generator using the seed
         # TODO add your code here
         # IMPORTANT NOTE: Define the snake before calling generate_random_apple
-        NotImplemented()
+        self.snake = [Point(self.width//2, self.height//2)] # Start at the center
+        self.direction = Direction.LEFT # left coz thats the constructor default
+        self.apple = self.generate_random_apple()
 
         return SnakeObservation(tuple(self.snake), self.direction, self.apple)
 
@@ -92,17 +94,19 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
         # TODO add your code here
         # a snake can wrap around the grid
         # NOTE: The action order does not matter
-        NotImplemented()
+        if self.direction in {Direction.RIGHT, Direction.LEFT}:
+            return [Direction.NONE, Direction.UP, Direction.DOWN]
+        elif self.direction in {Direction.UP, Direction.DOWN}:
+            return [Direction.NONE, Direction.RIGHT, Direction.LEFT]
 
     # Updates the current state using the given action
-    def step(self, action: Direction) -> \
-            Tuple[SnakeObservation, float, bool, Dict]:
+    def step(self, action: Direction) -> Tuple[SnakeObservation, float, bool, Dict]:
         """
         Updates the state of the Snake game by applying the given action.
-
+    
         Args:
             action (Direction): The action to apply to the current state.
-
+    
         Returns:
             A tuple containing four elements:
             - next_state (SnakeObservation): The state of the game after taking the given action.
@@ -113,9 +117,57 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
         done = False
         reward = 0
         
-        # TODO Complete the following function
-        NotImplemented()
-
+        # Validate and update direction
+        if action == Direction.NONE:
+            action = self.direction
+        
+        # Check if the action is valid (not opposite direction)
+        if ((action == Direction.RIGHT and self.direction != Direction.LEFT) or
+            (action == Direction.UP and self.direction != Direction.DOWN) or
+            (action == Direction.LEFT and self.direction != Direction.RIGHT) or
+            (action == Direction.DOWN and self.direction != Direction.UP)):
+            self.direction = action
+        
+        print(f"\033[94mAction: {action}, Direction: {self.direction}\033[0m")
+            
+        current_head = self.snake[0]
+        print(f"\033[92mCurrent Head: {current_head}\033[0m")
+    
+        # Calculate new head position    
+        new_head = current_head + self.direction.to_vector()
+        print(f"\033[93mNew Head: {new_head}\033[0m")
+        
+        # Check boundary collision to wrap around
+        if (new_head.x < 0 or new_head.x >= self.width or 
+            new_head.y < 0 or new_head.y >= self.height):
+            new_head = Point(new_head.x % self.width, new_head.y % self.height)
+        print(f"\033[95mWrapped New Head: {new_head}\033[0m")
+        
+        # Check self collision (excluding the last point)
+        if new_head in self.snake[:-1]:
+            done = True
+            reward = -100
+            print(f"\033[91mCollision Detected! Game Over.\033[0m")
+            # Move snake new head 
+            self.snake.insert(0, new_head)
+            # Remove tail with pop()
+            self.snake.pop()
+            return SnakeObservation(tuple(self.snake), self.direction, self.apple), reward, done, {}
+        
+        # Move snake new head
+        self.snake.insert(0, new_head)
+        
+        print(f"\033[96mSnake: {self.snake}\033[0m")
+        
+        # check apple and grow snake by not removing tail
+        if new_head == self.apple:
+            reward = 1
+            self.apple = self.generate_random_apple()
+            print(f"\033[92mApple Eaten! New Apple: {self.apple}\033[0m")
+        else:
+            # Remove tail with pop()
+            self.snake.pop()
+            print(f"\033[96mSnake after moving: {self.snake}\033[0m")
         
         return SnakeObservation(tuple(self.snake), self.direction, self.apple), reward, done, {}
 
@@ -167,7 +219,7 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
         }[string.upper()]
     
     # Converts an action to a string
-    def format_action(self, action: Direction) -> str:
+    def format_action(self, action: Direction) -> str:  
         return {
             Direction.RIGHT: 'R',
             Direction.UP:    'U',

@@ -4,8 +4,8 @@ from environment import Environment
 from mdp import MarkovDecisionProcess, S, A
 import json
 from helpers.utils import NotImplemented
-from colorama import init, Fore, Style
-init()  # Initialize colorama
+# from colorama import init, Fore, Style
+# init()  # Initialize colorama
 
 # This is a class for a generic Value Iteration agent
 class ValueIterationAgent(Agent[S, A]):
@@ -24,7 +24,7 @@ class ValueIterationAgent(Agent[S, A]):
     def compute_bellman_with_action(self, state: S) -> tuple[float, A]:
         # For terminal states, return reward
         if self.mdp.is_terminal(state):
-            print(f"{Fore.RED}Terminal state reached: {state}{Style.RESET_ALL}")
+            # print(f"{Fore.RED}Terminal state reached: {state}{Style.RESET_ALL}")
             return self.mdp.get_reward(state, None, None), None
     
         max_utility = float('-inf')
@@ -32,27 +32,27 @@ class ValueIterationAgent(Agent[S, A]):
         
         # Get valid actions
         actions = self.mdp.get_actions(state)
-        print(f"{Fore.GREEN}Available actions for state {state}: {actions}{Style.RESET_ALL}")
+        # print(f"{Fore.GREEN}Available actions for state {state}: {actions}{Style.RESET_ALL}")
         
         if not actions:
-            print(f"{Fore.RED}No valid actions for state {state}{Style.RESET_ALL}")
+            # print(f"{Fore.RED}No valid actions for state {state}{Style.RESET_ALL}")
             return 0.0, None
             
         for action in actions:
             action_utility = 0
             # Calculate utility considering transition probabilities
             successors = self.mdp.get_successor(state, action)
-            print(f"{Fore.BLUE}Successors for action {action}: {successors}{Style.RESET_ALL}")
+            # print(f"{Fore.BLUE}Successors for action {action}: {successors}{Style.RESET_ALL}")
             
             for next_state, prob in successors.items():
                 reward = self.mdp.get_reward(state, action, next_state)
                 action_utility += prob * (reward + self.discount_factor * self.utilities[next_state])
-                print(f"{Fore.BLUE}State: {next_state}, Prob: {prob}, Reward: {reward}, Utility: {action_utility}{Style.RESET_ALL}")
+                # print(f"{Fore.BLUE}State: {next_state}, Prob: {prob}, Reward: {reward}, Utility: {action_utility}{Style.RESET_ALL}")
             
             if action_utility > max_utility:
                 max_utility = action_utility
                 best_action = action
-                print(f"{Fore.YELLOW}New best action: {action} with utility: {action_utility}{Style.RESET_ALL}")
+                # print(f"{Fore.YELLOW}New best action: {action} with utility: {action_utility}{Style.RESET_ALL}")
                     
         return max_utility, best_action
 
@@ -79,23 +79,16 @@ class ValueIterationAgent(Agent[S, A]):
         # return  max_utility
         utility, _ = self.compute_bellman_with_action(state)
         return utility
+    
+    
     # Applies a single utility update
     # then returns True if the utilities has converged (the maximum utility change is less or equal the tolerance)
     # and False otherwise
     def update(self, tolerance: float = 0) -> bool:
-        #TODO: Complete this function
-        # store the old utilities
-        old_utilities = self.utilities.copy()
-        max_change = 0
-        
-        # update the utilities
-        for state in self.mdp.get_states():
-            self.utilities[state] = self.compute_bellman(state)
-            # we calculate the difference between new utility and old ones to know when they converge
-            change = abs(self.utilities[state] - old_utilities.get(state, 0))
-            max_change = max(max_change, change)
-        #if the change is less than tolerance, then the utilities have converged return true
-        return max_change <= tolerance
+        new_utilities = {state: self.compute_bellman(state) for state in self.mdp.get_states()}
+        converged = all(abs(self.utilities[state] - new_utilities[state]) < tolerance for state in self.mdp.get_states())
+        self.utilities = new_utilities
+        return converged
 
     # This function applies value iteration starting from the current utilities stored in the agent and stores the new utilities in the agent
     # NOTE: this function does incremental update and does not clear the utilities to 0 before running
